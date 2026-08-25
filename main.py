@@ -1,6 +1,15 @@
-from fastapi import FastAPI , Query
+from fastapi import FastAPI , Query , status , HTTPException , Form , Body , UploadFile , File
+from fastapi.exception_handlers import http_exception_handler
 
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("app started")
+    yield
+    print("app stopped")
+
+app = FastAPI(lifespan=lifespan)
 
 names = [
     { "id":1 , "name" : "ali" },
@@ -11,39 +20,48 @@ names = [
 
 s=4
 
-@app.get("/names")
-def retervive_names(q : str | None = Query(default=None , max_length=50)):
+@app.get("/names", status_code=status.HTTP_200_OK)
+def retervive_names(q : str | None = Query(alias="search",examples="ali", description="import your search key",default=None , max_length=50)):
     if q :
         return [item for item in names if q in item["name"].lower()]
     return names
 
-@app.get("/name/{id}")
+@app.get("/name/{id}" , status_code=status.HTTP_200_OK)
 def retervive_name_detaile(id : int):
     for item in names :
         if item["id"] == id :
             return item
-    return { "massage" : "not found..."}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail="not found...")
 
-@app.post("/add_name")
-def add_name(name:str):
+@app.post("/add_name", status_code=status.HTTP_201_CREATED)
+def add_name(name:str = Body(embed=True)):
     global s
     s+=1
     obj = { "id" : s , "name" : name }
     names.append(obj)
     return  obj
 
-@app.put("/update")
+@app.put("/update", status_code=status.HTTP_202_ACCEPTED)
 def update_name(id:int , name:str):
     for item in names :
         if item["id"] == id :
             item["name"] = name
             return item
-    return { "massage" : "not found..."}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail="not found...")
 
-@app.delete("/delete")
+@app.delete("/delete", status_code=status.HTTP_202_ACCEPTED)
 def delete_name(id:int):
     for item in names :
         if item["id"] == id :
             names.remove(item)
             return item
-    return { "massage" : "not found..."}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail="not found...")
+
+@app.post("/upload_file/")
+async def upload_file(file : UploadFile = File(...)):
+    content = await file.read()
+    return { "filename" : file.filename, "content_type" : file.content_type , "file_size" : len(content)}
+
+@app.post("/uploadfiles/")
+async def create_upload_files(files: list[UploadFile]):
+    return {"filenames": [file.filename for file in files]}
