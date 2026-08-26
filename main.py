@@ -1,7 +1,8 @@
-from fastapi import FastAPI , Query , status , HTTPException , Form , Body , UploadFile , File
+from fastapi import FastAPI , Query , status , HTTPException , Form , Body , UploadFile , File , Path
 from fastapi.exception_handlers import http_exception_handler
-
+from schemas import PersonCreateSchema , PersonResponceSchema , PersonUpdateSchema
 from contextlib import asynccontextmanager
+from typing import List
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,32 +21,32 @@ names = [
 
 s=4
 
-@app.get("/names", status_code=status.HTTP_200_OK)
+@app.get("/names", status_code=status.HTTP_200_OK, response_model=List[PersonResponceSchema])
 def retervive_names(q : str | None = Query(alias="search",examples="ali", description="import your search key",default=None , max_length=50)):
     if q :
         return [item for item in names if q in item["name"].lower()]
     return names
 
-@app.get("/name/{id}" , status_code=status.HTTP_200_OK)
+@app.get("/name/{id}" , status_code=status.HTTP_200_OK, response_model=PersonResponceSchema)
 def retervive_name_detaile(id : int):
     for item in names :
         if item["id"] == id :
             return item
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail="not found...")
 
-@app.post("/add_name", status_code=status.HTTP_201_CREATED)
-def add_name(name:str = Body(embed=True)):
+@app.post("/add_name", status_code=status.HTTP_201_CREATED, response_model=PersonCreateSchema)
+def add_name(person : PersonCreateSchema):
     global s
     s+=1
-    obj = { "id" : s , "name" : name }
+    obj = { "id" : s , "name" : person.name }
     names.append(obj)
     return  obj
 
-@app.put("/update", status_code=status.HTTP_202_ACCEPTED)
-def update_name(id:int , name:str):
+@app.put("/update", status_code=status.HTTP_202_ACCEPTED, response_model=PersonResponceSchema)
+def update_name(person : PersonUpdateSchema, id : int = Path()):
     for item in names :
         if item["id"] == id :
-            item["name"] = name
+            item["name"] = person.name
             return item
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail="not found...")
 
