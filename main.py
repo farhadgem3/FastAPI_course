@@ -1,6 +1,6 @@
-from fastapi import FastAPI , Query , status , HTTPException , Form , Body , UploadFile , File , Path
+from fastapi import FastAPI , Query , status , HTTPException , Form , Body , UploadFile , File , Path , WebSocket
 from fastapi.exception_handlers import http_exception_handler
-from schemas import PersonCreateSchema , PersonResponceSchema , PersonUpdateSchema
+from chatroom.schemas import PersonCreateSchema , PersonResponceSchema , PersonUpdateSchema
 from contextlib import asynccontextmanager
 from typing import List
 

@@ -2,20 +2,10 @@ from typing import List
 from typing import Optional
 from sqlalchemy import ForeignKey
 from sqlalchemy import String , Integer
-from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sqlite.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-class Base(DeclarativeBase):
-    pass
+from config.database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -27,6 +17,3 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"User (ID = {self.id}) , first_name={self.first_name} , last_name={self.last_name}"
-
-Base.metadata.create_all(engine)
-
