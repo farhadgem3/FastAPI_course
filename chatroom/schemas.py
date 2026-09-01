@@ -1,27 +1,33 @@
 from pydantic import BaseModel , field_validator , Field , field_serializer
 from sqlalchemy import desc
 
-class PersonBaseSchema(BaseModel):
-    first_name : str = Field(...,description="inter your first_name ...")
-    last_name : str = Field(...,description="inter your last_name ...")
-    @field_validator("first_name", "last_name")
-    def validate_name(cls , value):
-        if len(value) < 3 :
-            raise ValueError("name must be at least 3 characters")
-        if len(value) > 32:
-            raise ValueError("name must be at most 32 characters")
-        if not value.isalpha():
-            raise ValueError("name must contain only letters")
+class UserRegisterSchema(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=4, max_length=100)
+    # age : int = Field(...,gt=0 ,lt=100,description="inter your age ...")
+
+    @field_validator("username")
+    def validate_username(cls, value):
+        if not value.isalnum():
+            raise ValueError("username must contain only letters and numbers")
         return value
-    @field_serializer("first_name" , "last_name")
+
+    @field_serializer("username")
     def serializer_name(value):
         return value.title()
 
-class PersonCreateSchema(PersonBaseSchema):
-    pass
+class UserLoginSchema(BaseModel):
+    username: str
+    password: str
 
-class PersonResponceSchema(PersonBaseSchema):
-    id : int
+class UserUpdateSchema(BaseModel):
+    username: str | None = Field(None, min_length=3, max_length=50)
+    password: str | None = Field(None, min_length=4, max_length=100)
+    age : int | None = Field(None,gt=0 ,lt=100,description="inter your age ...")
 
-class PersonUpdateSchema(PersonBaseSchema):
-    pass
+class UserResponseSchema(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True

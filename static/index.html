@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chatroom</title>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: 40px auto; }
+        .hidden { display: none; }
+        input { display: block; margin: 8px 0; padding: 6px; width: 100%; }
+        #messages { list-style: none; padding: 0; height: 300px; overflow-y: auto; border: 1px solid #ccc; }
+        #messages li { padding: 4px 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- REGISTER SECTION -->
+    <div id="register-section">
+        <h2>Register</h2>
+        <input id="reg-username" placeholder="Username" />
+        <input id="reg-password" type="password" placeholder="Password" />
+        <button onclick="register()">Register</button>
+        <p id="reg-message"></p>
+        <p>Already have an account? <a href="#" onclick="showLogin()">Login here</a></p>
+    </div>
+
+    <!-- LOGIN SECTION -->
+    <div id="login-section" class="hidden">
+        <h2>Login</h2>
+        <input id="login-username" placeholder="Username" />
+        <input id="login-password" type="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+        <p id="login-message"></p>
+        <p>No account? <a href="#" onclick="showRegister()">Register here</a></p>
+    </div>
+
+    <!-- CHAT SECTION -->
+    <div id="chat-section" class="hidden">
+        <h2>Chatroom</h2>
+        <ul id="messages"></ul>
+        <input id="messageText" placeholder="Type a message" onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let ws;
+        let currentUsername = "";
+        let currentPassword = "";
+
+        function showLogin() {
+            document.getElementById("register-section").classList.add("hidden");
+            document.getElementById("login-section").classList.remove("hidden");
+        }
+
+        function showRegister() {
+            document.getElementById("login-section").classList.add("hidden");
+            document.getElementById("register-section").classList.remove("hidden");
+        }
+
+        async function register() {
+            const username = document.getElementById("reg-username").value;
+            const password = document.getElementById("reg-password").value;
+
+            const response = await fetch("/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            const messageEl = document.getElementById("reg-message");
+
+            if (response.ok) {
+                messageEl.textContent = "Registered successfully! Please login.";
+                messageEl.style.color = "green";
+                showLogin();
+            } else {
+                let errorText;
+                if (Array.isArray(data.detail)) {
+                    // Validation errors (422) come as a list of {loc, msg, ...}
+                    errorText = data.detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join(", ");
+                } else {
+                    // Custom errors (like your 400 "username already taken") come as a plain string
+                    errorText = data.detail || "Registration failed";
+                }
+                messageEl.textContent = errorText;
+                messageEl.style.color = "red";
+            }
+        }
+
+        let currentToken = "";
+
+        async function login() {
+            const username = document.getElementById("login-username").value;
+            const password = document.getElementById("login-password").value;
+
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            const messageEl = document.getElementById("login-message");
+
+            if (response.ok) {
+                currentToken = data.access_token;   // save the JWT
+                document.getElementById("login-section").classList.add("hidden");
+                document.getElementById("chat-section").classList.remove("hidden");
+                connectWebSocket();
+            } else {
+                messageEl.textContent = data.detail || "Login failed";
+                messageEl.style.color = "red";
+            }
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws?token=${currentToken}`);
+
+            ws.onmessage = (event) => {
+                const li = document.createElement("li");
+                li.textContent = event.data;
+                document.getElementById("messages").appendChild(li);
+            };
+
+            ws.onclose = (event) => {
+                if (event.code === 1008) {
+                    alert("Session expired or invalid. Please login again.");
+                    document.getElementById("chat-section").classList.add("hidden");
+                    showLogin();
+                }
+            };
+        }
+
+        function sendMessage() {
+            const input = document.getElementById("messageText");
+            ws.send(input.value);
+            input.value = "";
+        }
+    </script>
+</body>
+</html>
