@@ -1,11 +1,9 @@
-from django.conf.locale import tr
 from fastapi import FastAPI , Query , status , HTTPException , Form , Body , UploadFile , File , Path , WebSocket
 from fastapi.exception_handlers import http_exception_handler
 # from chatroom.schemas import PersonCreateSchema , PersonResponceSchema , PersonUpdateSchema
 from contextlib import asynccontextmanager
 from typing import List
 
-from httpx import get
 from chatroom.routes import router
 from config.database import get_db
 from fastapi.responses import HTMLResponse

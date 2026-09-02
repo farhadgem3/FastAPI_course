@@ -41,10 +41,6 @@
     </div>
 
     <script>
-        let ws;
-        let currentUsername = "";
-        let currentPassword = "";
-
         function showLogin() {
             document.getElementById("register-section").classList.add("hidden");
             document.getElementById("login-section").classList.remove("hidden");
@@ -75,10 +71,8 @@
             } else {
                 let errorText;
                 if (Array.isArray(data.detail)) {
-                    // Validation errors (422) come as a list of {loc, msg, ...}
                     errorText = data.detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join(", ");
                 } else {
-                    // Custom errors (like your 400 "username already taken") come as a plain string
                     errorText = data.detail || "Registration failed";
                 }
                 messageEl.textContent = errorText;
@@ -86,7 +80,7 @@
             }
         }
 
-        let currentToken = "";
+        let ws;
 
         async function login() {
             const username = document.getElementById("login-username").value;
@@ -95,14 +89,14 @@
             const response = await fetch("/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password }),
+                credentials: "same-origin"   // makes sure the browser stores the Set-Cookie from the response
             });
 
             const data = await response.json();
             const messageEl = document.getElementById("login-message");
 
             if (response.ok) {
-                currentToken = data.access_token;   // save the JWT
                 document.getElementById("login-section").classList.add("hidden");
                 document.getElementById("chat-section").classList.remove("hidden");
                 connectWebSocket();
@@ -113,7 +107,8 @@
         }
 
         function connectWebSocket() {
-            ws = new WebSocket(`ws://${window.location.host}/ws?token=${currentToken}`);
+            // no token in the URL anymore — the browser sends the access_token cookie automatically
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
 
             ws.onmessage = (event) => {
                 const li = document.createElement("li");
