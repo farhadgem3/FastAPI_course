@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login · Chatroom</title>
+<link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">C</div>
+    <h1>Welcome back</h1>
+    <p class="auth-subtitle">Login to continue chatting</p>
+
+    <form id="login-form">
+      <div class="field-group">
+        <label for="login-username">Username</label>
+        <input id="login-username" type="text" placeholder="yourname" autocomplete="username" required />
+      </div>
+      <div class="field-group">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn-primary" id="login-btn">
+        <span class="spinner"></span>
+        <span class="btn-text">Log In</span>
+      </button>
+      <p class="form-message" id="login-message"></p>
+    </form>
+
+    <p class="auth-footer">Don't have an account? <a href="/register">Create one</a></p>
+  </div>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const btn = document.getElementById("login-btn");
+    const messageEl = document.getElementById("login-message");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
+
+      messageEl.textContent = "";
+      messageEl.className = "form-message";
+      btn.classList.add("loading");
+      btn.disabled = true;
+
+      try {
+        const response = await fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+          messageEl.textContent = "Logged in! Redirecting...";
+          messageEl.classList.add("success");
+          setTimeout(() => window.location.href = "/chat", 400);
+        } else {
+          messageEl.textContent = data.detail || "Login failed";
+          messageEl.classList.add("error");
+        }
+      } catch (err) {
+        messageEl.textContent = "Could not reach the server.";
+        messageEl.classList.add("error");
+      } finally {
+        btn.classList.remove("loading");
+        btn.disabled = false;
+      }
+    });
+    (function () {
+    const params = new URLSearchParams(window.location.search);
+    const lang = params.get("lang");
+    if (lang) {
+        document.cookie = `lang=${lang}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    }
+})();
+  </script>
+</body>
+</html>

@@ -3,11 +3,14 @@ from fastapi.exception_handlers import http_exception_handler
 # from chatroom.schemas import PersonCreateSchema , PersonResponceSchema , PersonUpdateSchema
 from contextlib import asynccontextmanager
 from typing import List
-
+from fastapi.middleware.gzip import GZipMiddleware
 from chatroom.routes import router
 from config.database import get_db
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse , RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from chatroom.i18n_routes import router as i18n_router
+from chatroom.i18n.translator import load_translations
+from chatroom.i18n.middleware import LanguageMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -15,19 +18,42 @@ async def lifespan(app: FastAPI):
         get_db()
     except Exception as e:
         print(f"Error occurred while initializing database: {e}")
+    load_translations()
     print("app started")
     yield
     print("app stopped")
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(LanguageMiddleware)
+
 app.include_router(router)
+app.include_router(i18n_router)
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get("/", response_class=HTMLResponse)
-async def get_chat_page():
-    with open("static/index.html") as f:
-        return f.read()
+
+def render_page(filename: str) -> HTMLResponse:
+    with open(f"static/{filename}", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/login")
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    return render_page("login.html")
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page():
+    return render_page("register.html")
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page():
+    return render_page("chat.html")
 
 # names = [
 #     { "id":1 , "name" : "ali" },

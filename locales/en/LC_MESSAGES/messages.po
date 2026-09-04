@@ -1,0 +1,28 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: 1.0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+msgid "Hello, welcome!"
+msgstr "Hello, welcome!"
+
+msgid "Goodbye, see you soon!"
+msgstr "Goodbye, see you soon!"
+
+msgid "The service is running normally."
+msgstr "The service is running normally."
+
+msgid "Welcome to the chat application!"
+msgstr "Welcome to the chat application!"
+
+msgid "invalid username or password"
+msgstr "invalid username or password"
+
+msgid "username already taken"
+msgstr "username already taken"
+
+msgid "user not found"
+msgstr "user not found"

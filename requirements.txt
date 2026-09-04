@@ -3,3 +3,4 @@ alembic==1.18.5
 sqlalchemy==2.0.51
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.5.0
+babel==2.18.0

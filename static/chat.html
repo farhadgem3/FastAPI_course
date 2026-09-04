@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chatroom</title>
+<link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="chat-page">
+  <header class="chat-header">
+    <div class="brand">
+      <div class="brand-icon">C</div>
+      <div class="brand-name">Chatroom</div>
+    </div>
+    <div class="user-info">
+      <span class="username-badge">Logged in as <strong id="current-username">...</strong></span>
+      <button class="btn-logout" id="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="chat-container">
+    <p class="connection-banner" id="connection-banner">Connection lost. Trying to reconnect...</p>
+    <div class="messages-panel" id="messages-panel"></div>
+    <div class="chat-input-row">
+      <input id="message-input" type="text" placeholder="Type a message..." autocomplete="off" />
+      <button class="btn-send" id="send-btn" aria-label="Send">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let ws;
+    let currentUsername = null;
+    const messagesPanel = document.getElementById("messages-panel");
+    const banner = document.getElementById("connection-banner");
+
+    async function init() {
+      // Confirm the user is actually logged in before opening the socket
+      const res = await fetch("/me", { credentials: "same-origin" });
+      if (!res.ok) {
+        window.location.href = "/login";
+        return;
+      }
+      const me = await res.json();
+      currentUsername = me.username;
+      document.getElementById("current-username").textContent = currentUsername;
+      connectWebSocket();
+    }
+
+    function connectWebSocket() {
+      ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+      ws.onopen = () => banner.classList.remove("show");
+
+      ws.onmessage = (event) => {
+        renderMessage(event.data);
+        messagesPanel.scrollTop = messagesPanel.scrollHeight;
+      };
+
+      ws.onclose = (event) => {
+        if (event.code === 1008) {
+          window.location.href = "/login";
+        } else {
+          banner.classList.add("show");
+        }
+      };
+    }
+
+    function renderMessage(raw) {
+      // System announcements: "[ alice joined the chat ]"
+      const systemMatch = raw.match(/^\[\s(.+?)\s\]$/);
+      if (systemMatch) {
+        const row = document.createElement("div");
+        row.className = "system-msg";
+        const span = document.createElement("span");
+        span.textContent = systemMatch[1];
+        row.appendChild(span);
+        messagesPanel.appendChild(row);
+        return;
+      }
+
+      // Normal chat messages: "[2026-09-04 10:00] alice: hello"
+      const match = raw.match(/^\[(.+?)\]\s(.+?):\s([\s\S]*)$/);
+      const row = document.createElement("div");
+
+      if (match) {
+        const [, timestamp, sender, content] = match;
+        const isOwn = sender === currentUsername;
+        row.className = `msg-row ${isOwn ? "own" : "other"}`;
+
+        const wrap = document.createElement("div");
+        wrap.className = "msg-bubble-wrap";
+
+        if (!isOwn) {
+          const senderEl = document.createElement("div");
+          senderEl.className = "msg-sender";
+          senderEl.textContent = sender;
+          wrap.appendChild(senderEl);
+        }
+
+        const bubble = document.createElement("div");
+        bubble.className = "msg-bubble";
+        bubble.textContent = content;   // textContent, never innerHTML — avoids XSS from message content
+        wrap.appendChild(bubble);
+
+        const timeEl = document.createElement("div");
+        timeEl.className = "msg-time";
+        timeEl.textContent = timestamp;
+        wrap.appendChild(timeEl);
+
+        row.appendChild(wrap);
+      } else {
+        row.className = "msg-row other";
+        const wrap = document.createElement("div");
+        wrap.className = "msg-bubble-wrap";
+        const bubble = document.createElement("div");
+        bubble.className = "msg-bubble";
+        bubble.textContent = raw;
+        wrap.appendChild(bubble);
+        row.appendChild(wrap);
+      }
+      messagesPanel.appendChild(row);
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("message-input");
+      const text = input.value.trim();
+      if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(text);
+      input.value = "";
+    }
+
+    document.getElementById("send-btn").addEventListener("click", sendMessage);
+    document.getElementById("message-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await fetch("/logout", { method: "POST", credentials: "same-origin" });
+      window.location.href = "/login";
+    });
+    (function () {
+    const params = new URLSearchParams(window.location.search);
+    const lang = params.get("lang");
+    if (lang) {
+        document.cookie = `lang=${lang}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    }
+})();
+
+    init();
+  </script>
+</body>
+</html>

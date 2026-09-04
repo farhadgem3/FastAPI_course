@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Register · Chatroom</title>
+<link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">C</div>
+    <h1>Create an account</h1>
+    <p class="auth-subtitle">Join the chatroom in seconds</p>
+
+    <form id="register-form">
+      <div class="field-group">
+        <label for="reg-username">Username</label>
+        <input id="reg-username" type="text" placeholder="letters and numbers only" autocomplete="username" required minlength="3" maxlength="50" />
+      </div>
+      <div class="field-group">
+        <label for="reg-password">Password</label>
+        <input id="reg-password" type="password" placeholder="At least 4 characters" autocomplete="new-password" required minlength="4" />
+      </div>
+      <button type="submit" class="btn-primary" id="register-btn">
+        <span class="spinner"></span>
+        <span class="btn-text">Create Account</span>
+      </button>
+      <p class="form-message" id="register-message"></p>
+    </form>
+
+    <p class="auth-footer">Already have an account? <a href="/login">Log in</a></p>
+  </div>
+
+  <script>
+    const form = document.getElementById("register-form");
+    const btn = document.getElementById("register-btn");
+    const messageEl = document.getElementById("register-message");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("reg-username").value.trim();
+      const password = document.getElementById("reg-password").value;
+
+      messageEl.textContent = "";
+      messageEl.className = "form-message";
+      btn.classList.add("loading");
+      btn.disabled = true;
+
+      try {
+        const response = await fetch("/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+          messageEl.textContent = "Account created! Redirecting to login...";
+          messageEl.classList.add("success");
+          setTimeout(() => window.location.href = "/login", 700);
+        } else {
+          let errorText;
+          if (Array.isArray(data.detail)) {
+            errorText = data.detail.map(err => `${err.loc[err.loc.length - 1]}: ${err.msg}`).join(", ");
+          } else {
+            errorText = data.detail || "Registration failed";
+          }
+          messageEl.textContent = errorText;
+          messageEl.classList.add("error");
+        }
+      } catch (err) {
+        messageEl.textContent = "Could not reach the server.";
+        messageEl.classList.add("error");
+      } finally {
+        btn.classList.remove("loading");
+        btn.disabled = false;
+      }
+    });
+    (function () {
+    const params = new URLSearchParams(window.location.search);
+    const lang = params.get("lang");
+    if (lang) {
+        document.cookie = `lang=${lang}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    }
+})();
+  </script>
+</body>
+</html>

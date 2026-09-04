@@ -14,29 +14,34 @@ from chatroom.auth import (
     get_authenticated_user, EXPIRE_MINUTES
 )
 from chatroom.schemas import UserRegisterSchema, UserLoginSchema, UserResponseSchema, UserUpdateSchema
+from chatroom.i18n.translator import get_translator_dep
 
 router = APIRouter(tags=["users"])
+
+@router.get("/me", response_model=UserResponseSchema)
+async def get_me(current_user: User = Depends(get_authenticated_user)):
+    return current_user
 
 # ---------- PUBLIC ROUTES (no login required) ----------
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponseSchema)
-async def register(user: UserRegisterSchema, db: Session = Depends(get_db)):
+async def register(user: UserRegisterSchema, db: Session = Depends(get_db),_=Depends(get_translator_dep)):
     new_user = User(username=user.username, hashed_password=hash_password(user.password))
     db.add(new_user)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="username already taken")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_("username already taken"))
     db.refresh(new_user)
     return new_user
 
 @router.post("/login")
-async def login(credentials: UserLoginSchema, response: Response, db: Session = Depends(get_db)):
+async def login(credentials: UserLoginSchema, response: Response, db: Session = Depends(get_db) , _=Depends(get_translator_dep)):
     user = db.query(User).filter(User.username == credentials.username).first()
     if not user or not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid username or password")
-
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_("invalid username or password"))
+        # raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid username or password")
     access_token = create_access_token(username=user.username)
     refresh_token = create_refresh_token(username=user.username)
 
