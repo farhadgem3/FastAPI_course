@@ -2,7 +2,6 @@ import gettext
 from pathlib import Path
 from fastapi import Request, Depends
 
-
 LOCALES_DIR = Path(__file__).resolve().parent.parent.parent / "locales"
 DOMAIN = "messages"
 SUPPORTED_LANGUAGES = ["en", "fa"]
@@ -15,7 +14,9 @@ def load_translations() -> None:
     """Load every supported language's compiled .mo file into memory once, at startup."""
     for lang in SUPPORTED_LANGUAGES:
         try:
-            translation = gettext.translation(DOMAIN, localedir=str(LOCALES_DIR), languages=[lang])
+            translation = gettext.translation(
+                DOMAIN, localedir=str(LOCALES_DIR), languages=[lang]
+            )
         except FileNotFoundError:
             # No .mo file found for this language yet (forgot to compile, or new language not translated).
             # Falls back to a "null" translator that just returns the original text unchanged.
@@ -28,6 +29,7 @@ def get_translator(lang: str):
     lang = lang if lang in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
     translation = _translations.get(lang, gettext.NullTranslations())
     return translation.gettext
+
 
 def get_language(request: Request) -> str:
     """Dependency: read the language that the middleware already resolved for this request."""

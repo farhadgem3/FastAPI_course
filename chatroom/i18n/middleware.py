@@ -6,10 +6,14 @@ from chatroom.i18n.translator import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 class LanguageMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         lang = self._resolve_language(request)
-        request.state.lang = lang          # stash it on the request so dependencies can read it later
+        request.state.lang = (
+            lang  # stash it on the request so dependencies can read it later
+        )
 
         response = await call_next(request)
-        response.headers["Content-Language"] = lang   # helpful for debugging / API consumers
+        response.headers["Content-Language"] = (
+            lang  # helpful for debugging / API consumers
+        )
         return response
 
     def _resolve_language(self, request: Request) -> str:

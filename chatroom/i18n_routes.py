@@ -15,8 +15,7 @@ async def goodbye(_=Depends(get_translator_dep)):
 
 
 @router.get("/status")
-async def status_check(_=Depends(get_translator_dep), lang: str = Depends(get_language)):
-    return {
-        "language": lang,
-        "message": _("The service is running normally.")
-    }
+async def status_check(
+    _=Depends(get_translator_dep), lang: str = Depends(get_language)
+):
+    return {"language": lang, "message": _("The service is running normally.")}

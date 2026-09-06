@@ -1,5 +1,5 @@
-from pydantic import BaseModel , field_validator , Field , field_serializer
-from sqlalchemy import desc
+from pydantic import BaseModel, field_validator, Field, field_serializer
+
 
 class UserRegisterSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -16,14 +16,17 @@ class UserRegisterSchema(BaseModel):
     def serializer_name(value):
         return value.title()
 
+
 class UserLoginSchema(BaseModel):
     username: str
     password: str
 
+
 class UserUpdateSchema(BaseModel):
     username: str | None = Field(None, min_length=3, max_length=50)
     password: str | None = Field(None, min_length=4, max_length=100)
-    age : int | None = Field(None,gt=0 ,lt=100,description="inter your age ...")
+    age: int | None = Field(None, gt=0, lt=100, description="inter your age ...")
+
 
 class UserResponseSchema(BaseModel):
     id: int

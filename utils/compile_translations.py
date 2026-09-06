@@ -4,6 +4,7 @@ from babel.messages.mofile import write_mo
 
 LOCALES_DIR = "locales"
 
+
 def compile_all():
     for lang in os.listdir(LOCALES_DIR):
         po_path = os.path.join(LOCALES_DIR, lang, "LC_MESSAGES", "messages.po")
@@ -14,6 +15,7 @@ def compile_all():
             with open(mo_path, "wb") as mo_file:
                 write_mo(mo_file, catalog)
             print(f"Compiled {po_path} -> {mo_path}")
+
 
 if __name__ == "__main__":
     compile_all()
