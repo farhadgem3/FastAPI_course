@@ -1,7 +1,6 @@
 from typing import List
 from fastapi import WebSocket
 
-
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -15,11 +14,21 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
+        try:
+            await websocket.send_text(message)
+        except Exception:
+            self.disconnect(websocket)
 
     async def broadcast(self, message: str):
+        dead_connections = []
         for connection in self.active_connections:
-            await connection.send_text(message)
-
+            try:
+                await connection.send_text(message)
+            except Exception:
+                dead_connections.append(connection)
+        
+        # Clean up closed sockets automatically
+        for dead in dead_connections:
+            self.disconnect(dead)
 
 manager = ConnectionManager()

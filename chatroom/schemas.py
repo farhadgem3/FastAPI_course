@@ -1,4 +1,5 @@
 from pydantic import BaseModel, field_validator, Field, field_serializer
+from pydantic import ConfigDict
 
 
 class UserRegisterSchema(BaseModel):
@@ -32,5 +33,4 @@ class UserResponseSchema(BaseModel):
     id: int
     username: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

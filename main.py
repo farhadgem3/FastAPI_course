@@ -7,7 +7,6 @@ from chatroom.routes import router
 from config.database import get_db
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from chatroom.i18n_routes import router as i18n_router
 from chatroom.i18n.translator import load_translations
 from chatroom.i18n.middleware import LanguageMiddleware
 
@@ -30,7 +29,6 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(LanguageMiddleware)
 
 app.include_router(router)
-app.include_router(i18n_router)
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

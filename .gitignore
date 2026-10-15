@@ -53,7 +53,7 @@ coverage.xml
 .dmypy.json
 dmypy.json
 
-
+test_api.py
 migrations/
 alembic.ini
 first_step/

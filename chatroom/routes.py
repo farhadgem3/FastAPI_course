@@ -33,9 +33,21 @@ from chatroom.schemas import (
     UserUpdateSchema,
 )
 from chatroom.i18n.translator import get_translator_dep
+import redis
 
 router = APIRouter(tags=["users"])
 
+redis_client = redis.Redis(host='localhost', port=6379, db=0 , decode_responses=True)
+
+CHAT_HISTORY_KEY = "chat:history"
+MAX_HISTORY_LENGTH = 100  # keep only the latest 50 messages in cache
+
+def safe_redis_expire():
+    try:
+        redis_client.expire(CHAT_HISTORY_KEY, 3600)
+    except redis.ConnectionError:
+        # Redis not available – ignore
+        pass
 
 @router.get("/me", response_model=UserResponseSchema)
 async def get_me(current_user: User = Depends(get_authenticated_user)):
@@ -137,95 +149,95 @@ async def logout(response: Response):
     return {"message": "logged out"}
 
 
-# ---------- PROTECTED ROUTES (login required) ----------
+# # ---------- PROTECTED ROUTES (login required) ----------
 
 
-@router.get(
-    "/users", status_code=status.HTTP_200_OK, response_model=List[UserResponseSchema]
-)
-async def show_users(
-    limit: int = Query(1, gt=0),
-    page: int = Query(1, gt=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_authenticated_user),
-):
-    offset = (page - 1) * limit
-    return db.query(User).offset(offset).limit(limit).all()
+# @router.get(
+#     "/users", status_code=status.HTTP_200_OK, response_model=List[UserResponseSchema]
+# )
+# async def show_users(
+#     limit: int = Query(1, gt=0),
+#     page: int = Query(1, gt=0),
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_authenticated_user),
+# ):
+#     offset = (page - 1) * limit
+#     return db.query(User).offset(offset).limit(limit).all()
 
 
-@router.get(
-    "/user/{id}", status_code=status.HTTP_200_OK, response_model=UserResponseSchema
-)
-async def show_user(
-    id: int = Path(..., gt=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_authenticated_user),
-):
-    user = db.query(User).filter(User.id == id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="user not found")
-    return user
+# @router.get(
+#     "/user/{id}", status_code=status.HTTP_200_OK, response_model=UserResponseSchema
+# )
+# async def show_user(
+#     id: int = Path(..., gt=0),
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_authenticated_user),
+# ):
+#     user = db.query(User).filter(User.id == id).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="user not found")
+#     return user
 
 
-@router.put(
-    "/user/{id}", status_code=status.HTTP_200_OK, response_model=UserResponseSchema
-)
-async def update_user(
-    id: int,
-    user: UserUpdateSchema,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_authenticated_user),
-):
-    existing_user = db.query(User).filter(User.id == id).first()
-    if not existing_user:
-        raise HTTPException(status_code=404, detail="user not found")
+# @router.put(
+#     "/user/{id}", status_code=status.HTTP_200_OK, response_model=UserResponseSchema
+# )
+# async def update_user(
+#     id: int,
+#     user: UserUpdateSchema,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_authenticated_user),
+# ):
+#     existing_user = db.query(User).filter(User.id == id).first()
+#     if not existing_user:
+#         raise HTTPException(status_code=404, detail="user not found")
 
-    # extra safety: only let a user edit their own account, not anyone else's
-    if existing_user.id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="you can only edit your own account",
-        )
+#     # extra safety: only let a user edit their own account, not anyone else's
+#     if existing_user.id != current_user.id:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="you can only edit your own account",
+#         )
 
-    if user.username is not None:
-        existing_user.username = user.username
-    if user.password is not None:
-        existing_user.hashed_password = hash_password(user.password)
-    if user.age is not None:
-        existing_user.age = user.age
+#     if user.username is not None:
+#         existing_user.username = user.username
+#     if user.password is not None:
+#         existing_user.hashed_password = hash_password(user.password)
+#     if user.age is not None:
+#         existing_user.age = user.age
 
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="username already taken"
-        )
-    db.refresh(existing_user)
-    return existing_user
+#     try:
+#         db.commit()
+#     except IntegrityError:
+#         db.rollback()
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST, detail="username already taken"
+#         )
+#     db.refresh(existing_user)
+#     return existing_user
 
 
-@router.delete(
-    "/user/{id}", status_code=status.HTTP_200_OK, response_model=UserResponseSchema
-)
-async def delete_user(
-    id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_authenticated_user),
-):
-    existing_user = db.query(User).filter(User.id == id).first()
-    if not existing_user:
-        raise HTTPException(status_code=404, detail="user not found")
+# @router.delete(
+#     "/user/{id}", status_code=status.HTTP_200_OK, response_model=UserResponseSchema
+# )
+# async def delete_user(
+#     id: int,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_authenticated_user),
+# ):
+#     existing_user = db.query(User).filter(User.id == id).first()
+#     if not existing_user:
+#         raise HTTPException(status_code=404, detail="user not found")
 
-    if existing_user.id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="you can only delete your own account",
-        )
+#     if existing_user.id != current_user.id:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="you can only delete your own account",
+#         )
 
-    db.delete(existing_user)
-    db.commit()
-    return existing_user
+#     db.delete(existing_user)
+#     db.commit()
+#     return existing_user
 
 
 # ---------- WEBSOCKET (login required, via cookie) ----------
@@ -250,10 +262,26 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     await manager.connect(websocket)
 
-    history = db.query(Message).order_by(Message.timestamp.asc()).all()
-    for msg in history:
-        formatted = f"[{msg.timestamp.strftime('%Y-%m-%d %H:%M')}] {msg.user.username}: {msg.content}"
-        await manager.send_personal_message(formatted, websocket)
+    # ---------- Load History from Redis (or DB) ----------
+    try:
+        cached_history = redis_client.lrange(CHAT_HISTORY_KEY, 0, -1)
+    except redis.ConnectionError:
+        cached_history = []   # fallback to DB
+    
+    if cached_history:
+        # Redis stores messages as already formatted strings
+        for msg in cached_history:
+            await manager.send_personal_message(msg, websocket)
+    else:
+        # Cache is empty – query DB and populate Redis
+        history = db.query(Message).order_by(Message.timestamp.asc()).all()
+        for msg in history:
+            formatted = f"[{msg.timestamp.strftime('%Y-%m-%d %H:%M')}] {msg.user.username}: {msg.content}"
+            await manager.send_personal_message(formatted, websocket)
+            # Add to Redis (right push)
+            redis_client.rpush(CHAT_HISTORY_KEY, formatted)
+        # Trim to max length
+        redis_client.ltrim(CHAT_HISTORY_KEY, -MAX_HISTORY_LENGTH, -1)
 
     await manager.broadcast(f"[ {username} joined the chat ]")
 
@@ -263,7 +291,18 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             new_message = Message(content=data, user_id=user.id)
             db.add(new_message)
             db.commit()
+            
             formatted = f"[{new_message.timestamp.strftime('%Y-%m-%d %H:%M')}] {username}: {data}"
+            
+            try:
+                pipe = redis_client.pipeline()
+                pipe.rpush(CHAT_HISTORY_KEY, formatted)
+                pipe.ltrim(CHAT_HISTORY_KEY, -MAX_HISTORY_LENGTH, -1)
+                pipe.execute()
+                safe_redis_expire()   # optional
+            except redis.ConnectionError:
+                pass   # ignore Redis errors – the message is already in DB
+            
             await manager.broadcast(formatted)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
