@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from chatroom.i18n.translator import load_translations
 from chatroom.i18n.middleware import LanguageMiddleware
 
+#a test for git
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
